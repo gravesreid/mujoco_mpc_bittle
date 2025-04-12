@@ -1,0 +1,136 @@
+<mujoco model="BittleSelfContained">
+  <include file="../common.xml"/>
+
+  <option timestep="0.0005"/>
+
+  <custom>
+    <!-- agent -->
+    <text name="task_transition" data="Bittle|Walk|Trot|Scramble|Flip" />
+    <numeric name="agent_planner" data="2 " />
+    <numeric name="agent_horizon" data="0.35" />
+    <numeric name="agent_timestep" data="0.0005" />
+    <numeric name="sampling_spline_points" data="3" />
+    <numeric name="sampling_trajectories" data="60"/>
+    <numeric name="sampling_exploration" data="0.04" />
+    <numeric name="gradient_spline_points" data="5" />
+
+    <!-- residual - IMPORTANT PARAMETERS -->
+    <numeric name="residual_select_Gait" data="0"/>
+    <text name="residual_list_Gait" data="Stand|Walk|Trot|Canter|Gallop"/>
+    <numeric name="residual_select_Gait switch" data="1"/>
+    <text name="residual_list_Gait switch" data="Manual|Automatic"/>
+    <numeric name="residual_Cadence" data="2 0 4" />
+    <numeric name="residual_Amplitude" data=".06 0 0.2" />
+    <numeric name="residual_Duty ratio" data="0 0 1"/>
+    <numeric name="residual_Walk speed" data="0 0 4"/>
+    <numeric name="residual_Walk turn" data="0 -2 2"/>
+    <numeric name="residual_select_Flip dir" data="0"/>
+    <text name="residual_list_Flip dir" data="Back Flip|Front Flip"/>
+    <numeric name="residual_Heading" data="0 -3.14 3.14" />
+  </custom>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <global azimuth="-90"/>
+  </visual>
+
+  <statistic extent="1" center="0 0 .3"/>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" diffuse="0.5 0.5 0.5" specular="0.3 0.3 0.3" 
+      directional="true" castshadow="false"/>
+    <geom name="floor" size="0 0 0.1" pos="0 0 -0.001" type="plane" material="blue_grid"/>
+
+    <!-- Add the goal body that the controller expects -->
+    <body name="goal" mocap="true" pos=".3 0 0.26">
+      <geom size="0.12" contype="0" conaffinity="0" rgba="0 1 0 .5" group="2"/>
+    </body>
+    
+    <!-- Simple robot model directly in the task -->
+    <body name="root" pos="0 0 0.4" quat="1 0 0 0">
+      <freejoint name="root"/>
+      <site name="imu" size="0.01" pos="0 0 0"/>
+      <site name="head" pos=".1 0 0.1" size="0.01"/>
+      <inertial pos="0 0 0" mass="0.5" diaginertia="0.01 0.01 0.01"/>
+      
+      <!-- Simple geometry instead of meshes -->
+      <geom type="box" size="0.1 0.05 0.03" rgba="0 0 1 1"/>
+      
+      <!-- Left Front Leg -->
+      <body name="left-front-shoulder-link" pos="-0.08 0.08 0">
+        <joint name="left-front-shoulder-joint" axis="0 0 1" range="-1.57 1.57"/>
+        <geom type="capsule" size="0.01" fromto="0 0 0 0 0.05 0" rgba="0 1 0 1"/>
+        <body name="left-front-knee-link" pos="0 0.05 0">
+          <joint name="left-front-knee-joint" axis="1 0 0" range="-1.57 1.57"/>
+          <geom name="left_front_knee_c" type="capsule" size="0.01" fromto="0 0 0 0 0 -0.1" rgba="0 1 0 1"/>
+          <site name="LF_foot" pos="0 0 -0.1" size="0.015"/>
+        </body>
+      </body>
+
+      <!-- Left Back Leg -->
+      <body name="left-back-shoulder-link" pos="-0.08 -0.08 0">
+        <joint name="left-back-shoulder-joint" axis="0 0 1" range="-1.57 1.57"/>
+        <geom type="capsule" size="0.01" fromto="0 0 0 0 -0.05 0" rgba="0 1 0 1"/>
+        <body name="left-back-knee-link" pos="0 -0.05 0">
+          <joint name="left-back-knee-joint" axis="1 0 0" range="-1.57 1.57"/>
+          <geom name="left_back_knee_c" type="capsule" size="0.01" fromto="0 0 0 0 0 -0.1" rgba="0 1 0 1"/>
+          <site name="LB_foot" pos="0 0 -0.1" size="0.015"/>
+        </body>
+      </body>
+
+      <!-- Right Front Leg -->
+      <body name="right-front-shoulder-link" pos="0.08 0.08 0">
+        <joint name="right-front-shoulder-joint" axis="0 0 1" range="-1.57 1.57"/>
+        <geom type="capsule" size="0.01" fromto="0 0 0 0 0.05 0" rgba="0 1 0 1"/>
+        <body name="right-front-knee-link" pos="0 0.05 0">
+          <joint name="right-front-knee-joint" axis="1 0 0" range="-1.57 1.57"/>
+          <geom name="right_front_knee_c" type="capsule" size="0.01" fromto="0 0 0 0 0 -0.1" rgba="0 1 0 1"/>
+          <site name="RF_foot" pos="0 0 -0.1" size="0.015"/>
+        </body>
+      </body>
+
+      <!-- Right Back Leg -->
+      <body name="right-back-shoulder-link" pos="0.08 -0.08 0">
+        <joint name="right-back-shoulder-joint" axis="0 0 1" range="-1.57 1.57"/>
+        <geom type="capsule" size="0.01" fromto="0 0 0 0 -0.05 0" rgba="0 1 0 1"/>
+        <body name="right-back-knee-link" pos="0 -0.05 0">
+          <joint name="right-back-knee-joint" axis="1 0 0" range="-1.57 1.57"/>
+          <geom name="right_back_knee_c" type="capsule" size="0.01" fromto="0 0 0 0 0 -0.1" rgba="0 1 0 1"/>
+          <site name="RB_foot" pos="0 0 -0.1" size="0.015"/>
+        </body>
+      </body>
+    </body> <!-- THIS CLOSING TAG WAS MISSING -->
+  </worldbody>
+
+  <actuator>
+    <general name="left-front-shoulder" joint="left-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="left-front-knee" joint="left-front-knee-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="left-back-shoulder" joint="left-back-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="left-back-knee" joint="left-back-knee-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="right-front-shoulder" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="right-front-knee" joint="right-front-knee-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="right-back-shoulder" joint="right-back-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+    <general name="right-back-knee" joint="right-back-knee-joint" ctrllimited="true" ctrlrange="-1 1" gainprm="40"/>
+  </actuator>
+
+  <sensor>
+    <user name="Upright" dim="3" user="6 1 0 3 0.05" />
+    <user name="Height" dim="1" user="6 1 0 3 0.04" />
+    <user name="Position" dim="3" user="2 0.2 0 0.5 0.1" />
+    <user name="Balance" dim="2" user="2 0.2 0 0.3 0.1" />
+    <user name="Effort" dim="8" user="0 0.03 0.0 0.1" /> 
+    <user name="Posture" dim="8" user="0 0.02 0.0 0.1" />
+    <user name="Orientation" dim="2" user="0 0 0 .03" />
+    <user name="Angmom" dim="3" user="0 0 0 .03" />
+    
+    <framepos name="torso_pos" objtype="site" objname="imu" />
+    <subtreecom name="torso_subtreecom" body="root"/>
+    <subtreelinvel name="torso_subtreelinvel" body="root"/>
+    <subtreeangmom name="torso_angmom" body="root"/>
+  </sensor>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0.4 1 0 0 0 0 0 0 0 0 0 0 0"/>
+    <key name="crouch" qpos="0 0 0.25 1 0 0 0 0.3 0.9 0.3 0.9 0.3 0.9 0.3 0.9"/>
+  </keyframe>
+</mujoco>

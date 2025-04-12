@@ -1,0 +1,40 @@
+<mujoco model="BittleTest">
+  <include file="../common.xml"/>
+
+  <visual>
+    <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
+    <global azimuth="-90"/>
+  </visual>
+
+  <statistic extent="1" center="0 0 .3"/>
+
+  <worldbody>
+    <light pos="0 0 1.5" dir="0 0 -1" diffuse="0.5 0.5 0.5" specular="0.3 0.3 0.3" 
+      directional="true" castshadow="false"/>
+    <geom name="floor" size="0 0 0.1" pos="0 0 -0.001" type="plane" material="blue_grid"/>
+    
+    <!-- Include the Bittle robot model -->
+    <include file="bittle.xml" />
+  </worldbody>
+
+  <!-- Simple cost sensors matching the expected dimensions -->
+  <sensor>
+    <user name="Upright" dim="3" user="6 1 0 3 0.05" />
+    <user name="Height" dim="1" user="6 1 0 3 0.04" />
+    <user name="Position" dim="3" user="2 0.2 0 0.5 0.1" />
+    <user name="Balance" dim="2" user="2 0.2 0 0.3 0.1" />
+    <user name="Effort" dim="8" user="0 0.03 0.0 0.1" /> 
+    <user name="Posture" dim="8" user="0 0.02 0.0 0.1" />
+    <user name="Orientation" dim="2" user="0 0 0 .03" />
+    <user name="Angmom" dim="3" user="0 0 0 .03" />
+    
+    <framepos name="torso_pos" objtype="site" objname="imu" />
+    <subtreecom name="torso_subtreecom" body="root"/>
+    <subtreelinvel name="torso_subtreelinvel" body="root"/>
+    <subtreeangmom name="torso_angmom" body="root"/>
+  </sensor>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0.4 1 0 0 0 0 0 0 0 0 0 0 0"/>
+  </keyframe>
+</mujoco>

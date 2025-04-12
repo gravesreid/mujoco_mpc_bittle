@@ -41,6 +41,8 @@
 #include "mjpc/tasks/swimmer/swimmer.h"
 #include "mjpc/tasks/walker/walker.h"
 
+#include "mjpc/tasks/bittle/bittle.h"
+
 namespace mjpc {
 
 std::vector<std::shared_ptr<Task>> GetTasks() {
@@ -69,6 +71,7 @@ std::vector<std::shared_ptr<Task>> GetTasks() {
       std::make_shared<QuadrupedHill>(),
       std::make_shared<Swimmer>(),
       std::make_shared<Walker>(),
+      std::make_shared<BittleFlat>(),
   };
 }
 }  // namespace mjpc
