@@ -4,7 +4,7 @@
     <headlight ambient=".4 .4 .4" diffuse=".8 .8 .8" specular="0.1 0.1 0.1"/>
     <map znear=".01"/>
     <quality shadowsize="2048"/>
-    <global elevation="-15"/>
+    <global elevation="-.25" />
   </visual>
 
   <asset>
@@ -16,7 +16,7 @@
     <texture name="skybox" type="skybox" builtin="gradient" rgb1=".66 .79 1" rgb2=".9 .91 .93" width="800" height="800"/>
 
     <material name="self" rgba=".7 .5 .3 1"/>
-    <material name="self_default" rgba=".7 .5 .3 1"/>
+    <material name="self_default" rgba=".7 .7 .4 1"/>
     <material name="self_highlight" rgba="0 .5 .3 1"/>
     <material name="effector" rgba=".7 .4 .2 1"/>
     <material name="effector_default" rgba=".7 .4 .2 1"/>

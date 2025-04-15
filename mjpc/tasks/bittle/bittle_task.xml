@@ -30,7 +30,7 @@
 
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
-    <global azimuth="-90"/>
+    <global azimuth="-90" elevation="-20" />
   </visual>
 
   <statistic extent="1" center="0 0 .3"/>

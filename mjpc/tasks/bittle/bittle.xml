@@ -7,7 +7,7 @@
     <joint limited="true" damping="0.01" armature="0.01" frictionloss="0.1" />
     <equality solref="0.01 1.1" />
     <default class="visualgeom">
-      <geom material="visualgeom" condim="1" contype="1" conaffinity="15" />
+      <geom material="visualgeom" condim="1" contype="1" conaffinity="15" friction="0.8 0.02 0.01" />
     </default>
   </default>
 
@@ -28,8 +28,8 @@
 
   <worldbody>
     <body name="root" pos="0 0 0.9239305602569667" quat="1 0 0 0">
-      <site name="imu" size="0.01" pos="0 0 0" />
-      <site name="head" pos=".1 0 0.1" size="0.01"/>
+      <site name="imu" size="0.1" pos="0 0 0" />
+      <site name="head" pos="0 .5 0.1" size="0.1"/>
       <freejoint/>
       <inertial pos="0 -0.04 -0.02" mass="0.165" diaginertia="0.001 0.001 0.001" />
       <geom name="base_frame_c" type="mesh" mesh="base_frame.001" contype="1" conaffinity="15" group="1" class="visualgeom" />
