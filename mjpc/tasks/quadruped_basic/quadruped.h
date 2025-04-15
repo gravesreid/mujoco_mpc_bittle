@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#ifndef MJPC_TASKS_BITTLE_BITTLE_H_
-#define MJPC_TASKS_BITTLE_BITTLE_H_
+#ifndef MJPC_TASKS_QUADRUPED_QUADRUPED_H_
+#define MJPC_TASKS_QUADRUPED_QUADRUPED_H_
 
 #include <string>
 #include <mujoco/mujoco.h>
@@ -21,24 +21,25 @@
 
 namespace mjpc {
 
-class BittleFlat : public Task {
+class QuadrupedFlat : public Task {
  public:
   std::string Name() const override;
   std::string XmlPath() const override;
   class ResidualFn : public mjpc::BaseResidualFn {
    public:
-    explicit ResidualFn(const BittleFlat* task)
+    explicit ResidualFn(const QuadrupedFlat* task)
         : mjpc::BaseResidualFn(task) {}
     ResidualFn(const ResidualFn&) = default;
     void Residual(const mjModel* model, const mjData* data,
                   double* residual) const override;
 
    private:
-    friend class BittleFlat;
+    friend class QuadrupedFlat;
     //  ============  enums  ============
     // modes
-    enum BittleMode {
+    enum A1Mode {
       kModeQuadruped = 0,
+      kModeBiped,
       kModeWalk,
       kModeScramble,
       kModeFlip,
@@ -46,16 +47,16 @@ class BittleFlat : public Task {
     };
 
     // feet
-    enum BittleFoot {
-      kFootLF  = 0,  // left-front
-      kFootLB,       // left-back
-      kFootRF,       // right-front
-      kFootRB,       // right-back
+    enum A1Foot {
+      kFootFL  = 0,
+      kFootHL,
+      kFootFR,
+      kFootHR,
       kNumFoot
     };
 
     // gaits
-    enum BittleGait {
+    enum A1Gait {
       kGaitStand = 0,
       kGaitWalk,
       kGaitTrot,
@@ -65,17 +66,17 @@ class BittleFlat : public Task {
     };
 
     //  ============  constants  ============
-    constexpr static BittleFoot kFootAll[kNumFoot] = {kFootLF, kFootLB,
-                                                  kFootRF, kFootRB};
-    constexpr static BittleFoot kFootHind[2] = {kFootLB, kFootRB};
-    constexpr static BittleGait kGaitAll[kNumGait] = {kGaitStand, kGaitWalk,
+    constexpr static A1Foot kFootAll[kNumFoot] = {kFootFL, kFootHL,
+                                                  kFootFR, kFootHR};
+    constexpr static A1Foot kFootHind[2] = {kFootHL, kFootHR};
+    constexpr static A1Gait kGaitAll[kNumGait] = {kGaitStand, kGaitWalk,
                                                   kGaitTrot, kGaitCanter,
                                                   kGaitGallop};
 
     // gait phase signature (normalized)
     constexpr static double kGaitPhase[kNumGait][kNumFoot] =
     {
-    // LF     LB     RF     RB
+    // FL     HL     FR     HR
       {0,     0,     0,     0   },   // stand
       {0,     0.75,  0.5,   0.25},   // walk
       {0,     0.5,   0.5,   0   },   // trot
@@ -104,6 +105,9 @@ class BittleFlat : public Task {
       0.6,   // canter
       2,     // gallop
     };
+    // notes:
+    // - walk is never triggered by auto-gait
+    // - canter actually has a wider range than gallop
 
     // automatic gait switching: time constant for com speed filter
     constexpr static double kAutoGaitFilter = 0.2;    // second
@@ -112,29 +116,35 @@ class BittleFlat : public Task {
     constexpr static double kAutoGaitMinTime = 1;     // second
 
     // target torso height over feet when quadrupedal
-    constexpr static double kHeightQuadruped = 0.7;  // meter - adjusted for Bittle
+    constexpr static double kHeightQuadruped = 0.25;  // meter
+
+    // target torso height over feet when bipedal
+    constexpr static double kHeightBiped = 0.6;       // meter
 
     // radius of foot geoms
-    constexpr static double kFootRadius = 0.01;       // meter - adjusted for Bittle
+    constexpr static double kFootRadius = 0.02;       // meter
 
     // below this target yaw velocity, walk straight
     constexpr static double kMinAngvel = 0.01;        // radian/second
 
+    // posture gain factors for abduction, hip, knee
+    constexpr static double kJointPostureGain[3] = {2, 1, 1};  // unitless
+
     // flip: crouching height, from which leap is initiated
-    constexpr static double kCrouchHeight = 0.7;     // meter - adjusted for Bittle
+    constexpr static double kCrouchHeight = 0.15;     // meter
 
     // flip: leap height, beginning of flight phase
-    constexpr static double kLeapHeight = 0.3;        // meter - adjusted for Bittle
+    constexpr static double kLeapHeight = 0.5;        // meter
 
     // flip: maximum height of flight phase
-    constexpr static double kMaxHeight = 0.95;         // meter - adjusted for Bittle
+    constexpr static double kMaxHeight = 0.8;         // meter
 
     //  ============  methods  ============
     // return internal phase clock
     double GetPhase(double time) const;
 
     // return current gait
-    BittleGait GetGait() const;
+    A1Gait GetGait() const;
 
     // compute average foot position, depending on mode
     void AverageFootPos(double avg_foot_pos[3],
@@ -144,7 +154,7 @@ class BittleFlat : public Task {
     double StepHeight(double time, double footphase, double duty_ratio) const;
 
     // compute target step height for all feet
-    void FootStep(double step[kNumFoot], double time, BittleGait gait) const;
+    void FootStep(double step[kNumFoot], double time, A1Gait gait) const;
 
     // walk horizontal position given time
     void Walk(double pos[2], double time) const;
@@ -156,7 +166,7 @@ class BittleFlat : public Task {
     void FlipQuat(double quat[4], double time) const;
 
     //  ============  task state variables, managed by Transition  ============
-    BittleMode current_mode_     = kModeQuadruped;
+    A1Mode current_mode_       = kModeQuadruped;
     double last_transition_time_ = -1;
 
     // common mode states
@@ -189,14 +199,17 @@ class BittleFlat : public Task {
     int gait_param_id_        = -1;
     int gait_switch_param_id_ = -1;
     int flip_dir_param_id_    = -1;
+    int biped_type_param_id_  = -1;
     int cadence_param_id_     = -1;
     int amplitude_param_id_   = -1;
     int duty_param_id_        = -1;
+    int arm_posture_param_id_ = -1;
     int upright_cost_id_      = -1;
     int balance_cost_id_      = -1;
     int height_cost_id_       = -1;
     int foot_geom_id_[kNumFoot];
-    
+    int shoulder_body_id_[kNumFoot];
+
     // derived kinematic quantities describing flip trajectory
     double gravity_           = 0;
     double jump_vel_          = 0;
@@ -214,7 +227,7 @@ class BittleFlat : public Task {
     double land_rot_acc_      = 0;
   };
 
-  BittleFlat() : residual_(this) {}
+  QuadrupedFlat() : residual_(this) {}
   void TransitionLocked(mjModel* model, mjData* data) override;
 
   // call base-class Reset, save task-related ids
@@ -235,6 +248,44 @@ class BittleFlat : public Task {
   ResidualFn residual_;
 };
 
+
+class QuadrupedHill : public Task {
+ public:
+  std::string Name() const override;
+  std::string XmlPath() const override;
+  class ResidualFn : public mjpc::BaseResidualFn {
+   public:
+    explicit ResidualFn(const QuadrupedHill* task, int current_mode = 0)
+        : mjpc::BaseResidualFn(task), current_mode_(current_mode) {}
+
+    // --------------------- Residuals for quadruped task --------------------
+    //   Number of residuals: 4
+    //     Residual (0): position_z - average(foot position)_z - height_goal
+    //     Residual (1): position - goal_position
+    //     Residual (2): orientation - goal_orientation
+    //     Residual (3): control
+    //   Number of parameters: 1
+    //     Parameter (1): height_goal
+    // -----------------------------------------------------------------------
+    void Residual(const mjModel* model, const mjData* data,
+                  double* residual) const override;
+   private:
+    friend class QuadrupedHill;
+    int current_mode_;
+  };
+  QuadrupedHill() : residual_(this) {}
+  void TransitionLocked(mjModel* model, mjData* data) override;
+
+ protected:
+  std::unique_ptr<mjpc::ResidualFn> ResidualLocked() const override {
+    return std::make_unique<ResidualFn>(this, residual_.current_mode_);
+  }
+  ResidualFn* InternalResidual() override { return &residual_; }
+
+ private:
+  ResidualFn residual_;
+};
+
 }  // namespace mjpc
 
-#endif  // MJPC_TASKS_BITTLE_BITTLE_H_
+#endif  // MJPC_TASKS_QUADRUPED_QUADRUPED_H_

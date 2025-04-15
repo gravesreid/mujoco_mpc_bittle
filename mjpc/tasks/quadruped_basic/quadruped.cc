@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "mjpc/tasks/bittle/bittle.h"
+#include "mjpc/tasks/quadruped/quadruped.h"
 
 #include <string>
 
@@ -21,20 +21,24 @@
 #include "mjpc/utilities.h"
 
 namespace mjpc {
-std::string BittleFlat::XmlPath() const {
-  return GetModelPath("bittle/bittle_task.xml");
+std::string QuadrupedHill::XmlPath() const {
+  return GetModelPath("quadruped/task_hill.xml");
 }
-std::string BittleFlat::Name() const { return "Bittle Flat"; }
+std::string QuadrupedFlat::XmlPath() const {
+  return GetModelPath("quadruped/task_flat.xml");
+}
+std::string QuadrupedHill::Name() const { return "Quadruped Hill"; }
+std::string QuadrupedFlat::Name() const { return "Quadruped Flat"; }
 
-void BittleFlat::ResidualFn::Residual(const mjModel* model,
-                                    const mjData* data,
-                                    double* residual) const {
+void QuadrupedFlat::ResidualFn::Residual(const mjModel* model,
+                                         const mjData* data,
+                                         double* residual) const {
   // start counter
   int counter = 0;
 
   // get foot positions
   double* foot_pos[kNumFoot];
-  for (BittleFoot foot : kFootAll)
+  for (A1Foot foot : kFootAll)
     foot_pos[foot] = data->geom_xpos + 3 * foot_geom_id_[foot];
 
   // average foot position
@@ -48,7 +52,13 @@ void BittleFlat::ResidualFn::Residual(const mjModel* model,
 
   // ---------- Upright ----------
   if (current_mode_ != kModeFlip) {
-    residual[counter++] = torso_xmat[8] - 1;
+    if (current_mode_ == kModeBiped) {
+      double biped_type = parameters_[biped_type_param_id_];
+      int handstand = ReinterpretAsInt(biped_type) ? -1 : 1;
+      residual[counter++] = torso_xmat[6] - handstand;
+    } else {
+      residual[counter++] = torso_xmat[8] - 1;
+    }
     residual[counter++] = 0;
     residual[counter++] = 0;
   } else {
@@ -63,9 +73,10 @@ void BittleFlat::ResidualFn::Residual(const mjModel* model,
 
 
   // ---------- Height ----------
-  // quadrupedal height of torso over feet
+  // quadrupedal or bipedal height of torso over feet
   double* torso_pos = data->xipos + 3*torso_body_id_;
-  double height_goal = kHeightQuadruped;
+  bool is_biped = current_mode_ == kModeBiped;
+  double height_goal = is_biped ? kHeightBiped : kHeightQuadruped;
   if (current_mode_ == kModeScramble) {
     // disable height term in Scramble
     residual[counter++] = 0;
@@ -96,39 +107,49 @@ void BittleFlat::ResidualFn::Residual(const mjModel* model,
   residual[counter++] =
       current_mode_ == kModeScramble ? 2 * (head[2] - target[2]) : 0;
 
-// ---------- Gait ----------
-BittleGait gait = GetGait();
-double step[kNumFoot];
-FootStep(step, GetPhase(data->time), gait);
-for (BittleFoot foot : kFootAll) {
-  double query[3] = {foot_pos[foot][0], foot_pos[foot][1], foot_pos[foot][2]};
-//
-  if (current_mode_ == kModeScramble) {
-    double torso_to_goal[3];
-    double* goal = data->mocap_pos + 3*goal_mocap_id_;
-    mju_sub3(torso_to_goal, goal, torso_pos);
-    mju_normalize3(torso_to_goal);
-    mju_sub3(torso_to_goal, goal, foot_pos[foot]);
-    torso_to_goal[2] = 0;
-    mju_normalize3(torso_to_goal);
-    mju_addToScl3(query, torso_to_goal, 0.15);
+  // ---------- Gait ----------
+  A1Gait gait = GetGait();
+  double step[kNumFoot];
+  FootStep(step, GetPhase(data->time), gait);
+  for (A1Foot foot : kFootAll) {
+    if (is_biped) {
+      // ignore "hands" in biped mode
+      bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+      bool front_hand = !handstand && (foot == kFootFL || foot == kFootFR);
+      bool back_hand = handstand && (foot == kFootHL || foot == kFootHR);
+      if (front_hand || back_hand) {
+        residual[counter++] = 0;
+        continue;
+      }
+    }
+    double query[3] = {foot_pos[foot][0], foot_pos[foot][1], foot_pos[foot][2]};
+
+    if (current_mode_ == kModeScramble) {
+      double torso_to_goal[3];
+      double* goal = data->mocap_pos + 3*goal_mocap_id_;
+      mju_sub3(torso_to_goal, goal, torso_pos);
+      mju_normalize3(torso_to_goal);
+      mju_sub3(torso_to_goal, goal, foot_pos[foot]);
+      torso_to_goal[2] = 0;
+      mju_normalize3(torso_to_goal);
+      mju_addToScl3(query, torso_to_goal, 0.15);
+    }
+
+    double ground_height = Ground(model, data, query);
+    double height_target = ground_height + kFootRadius + step[foot];
+    double height_difference = foot_pos[foot][2] - height_target;
+    if (current_mode_ == kModeScramble) {
+      // in Scramble, foot higher than target is not penalized
+      height_difference = mju_min(0, height_difference);
+    }
+    residual[counter++] = step[foot] ? height_difference : 0;
   }
-//
-  double ground_height = Ground(model, data, query);
-  double height_target = ground_height + kFootRadius + step[foot];
-  double height_difference = foot_pos[foot][2] - height_target;
-  if (current_mode_ == kModeScramble) {
-    // in Scramble, foot higher than target is not penalized
-    height_difference = mju_min(0, height_difference);
-  }
-  residual[counter++] = step[foot] ? height_difference : 0;
-}
 
 
   // ---------- Balance ----------
   double* comvel = SensorByName(model, data, "torso_subtreelinvel");
   double capture_point[3];
-  double fall_time = mju_sqrt(2*kHeightQuadruped / 9.81);
+  double fall_time = mju_sqrt(2*height_goal / 9.81);
   mju_addScl3(capture_point, compos, comvel, fall_time);
   residual[counter++] = capture_point[0] - avg_foot_pos[0];
   residual[counter++] = capture_point[1] - avg_foot_pos[1];
@@ -153,11 +174,42 @@ for (BittleFoot foot : kFootAll) {
       mju_zero(residual + counter, model->nu);
     }
   }
+  for (A1Foot foot : kFootAll) {
+    for (int joint = 0; joint < 3; joint++) {
+      residual[counter + 3*foot + joint] *= kJointPostureGain[joint];
+    }
+  }
+  if (current_mode_ == kModeBiped) {
+    // loosen the "hands" in Biped mode
+    bool handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+    double arm_posture = parameters_[arm_posture_param_id_];
+    if (handstand) {
+      residual[counter + 6] *= arm_posture;
+      residual[counter + 7] *= arm_posture;
+      residual[counter + 8] *= arm_posture;
+      residual[counter + 9] *= arm_posture;
+      residual[counter + 10] *= arm_posture;
+      residual[counter + 11] *= arm_posture;
+    } else {
+      residual[counter + 0] *= arm_posture;
+      residual[counter + 1] *= arm_posture;
+      residual[counter + 2] *= arm_posture;
+      residual[counter + 3] *= arm_posture;
+      residual[counter + 4] *= arm_posture;
+      residual[counter + 5] *= arm_posture;
+    }
+  }
   counter += model->nu;
 
 
   // ---------- Yaw ----------
   double torso_heading[2] = {torso_xmat[0], torso_xmat[3]};
+  if (current_mode_ == kModeBiped) {
+    int handstand =
+        ReinterpretAsInt(parameters_[biped_type_param_id_]) ? 1 : -1;
+    torso_heading[0] = handstand * torso_xmat[2];
+    torso_heading[1] = handstand * torso_xmat[5];
+  }
   mju_normalize(torso_heading, 2);
   double heading_goal = parameters_[ParameterIndex(model, "Heading")];
   residual[counter++] = torso_heading[0] - mju_cos(heading_goal);
@@ -174,11 +226,11 @@ for (BittleFoot foot : kFootAll) {
 }
 
 //  ============  transition  ============
-void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
+void QuadrupedFlat::TransitionLocked(mjModel* model, mjData* data) {
   // ---------- handle mjData reset ----------
   if (data->time < residual_.last_transition_time_ ||
       residual_.last_transition_time_ == -1) {
-    if (mode != ResidualFn::kModeQuadruped) {
+    if (mode != ResidualFn::kModeQuadruped && mode != ResidualFn::kModeBiped) {
       mode = ResidualFn::kModeQuadruped;  // mode stateful, switch to Quadruped
     }
     residual_.last_transition_time_ = residual_.phase_start_time_ =
@@ -213,7 +265,11 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
   // TODO(b/268398978): remove reinterpret, int64_t business
   int auto_switch =
       ReinterpretAsInt(parameters[residual_.gait_switch_param_id_]);
-  if (auto_switch) {
+  if (mode == ResidualFn::kModeBiped) {
+    // biped always trots
+    parameters[residual_.gait_param_id_] =
+        ReinterpretAsDouble(ResidualFn::kGaitTrot);
+  } else if (auto_switch) {
     double com_speed = mju_norm(residual_.com_vel_, 2);
     for (int64_t gait : ResidualFn::kGaitAll) {
       // scramble requires a non-static gait
@@ -236,7 +292,7 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
   double gait_selection = parameters[residual_.gait_param_id_];
   if (gait_selection != residual_.current_gait_) {
     residual_.current_gait_ = gait_selection;
-    ResidualFn::BittleGait gait = residual_.GetGait();
+    ResidualFn::A1Gait gait = residual_.GetGait();
     parameters[residual_.duty_param_id_] = ResidualFn::kGaitParam[gait][0];
     parameters[residual_.cadence_param_id_] = ResidualFn::kGaitParam[gait][1];
     parameters[residual_.amplitude_param_id_] = ResidualFn::kGaitParam[gait][2];
@@ -311,8 +367,8 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
       // set parameters
       weight[CostTermByName(model, "Upright")] = 0.2;
       weight[CostTermByName(model, "Height")] = 5;
-      weight[CostTermByName(model, "Position")] = 0.5;
-      weight[CostTermByName(model, "Gait")] = 0.2;
+      weight[CostTermByName(model, "Position")] = 0;
+      weight[CostTermByName(model, "Gait")] = 0;
       weight[CostTermByName(model, "Balance")] = 0;
       weight[CostTermByName(model, "Effort")] = 0.005;
       weight[CostTermByName(model, "Posture")] = 0.1;
@@ -334,7 +390,7 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
   }
 
   // save mode
-  residual_.current_mode_ = static_cast<ResidualFn::BittleMode>(mode);
+  residual_.current_mode_ = static_cast<ResidualFn::A1Mode>(mode);
   residual_.last_transition_time_ = data->time;
 }
 
@@ -346,7 +402,7 @@ constexpr float kCapRgba[4] = {0.3, 0.3, 0.8, 1};   // capture point
 constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 
 // draw task-related geometry in the scene
-void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
+void QuadrupedFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
   // flip target pose
   if (residual_.current_mode_ == ResidualFn::kModeFlip) {
@@ -368,32 +424,42 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
 
   // current foot positions
   double* foot_pos[ResidualFn::kNumFoot];
-  for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll)
+  for (ResidualFn::A1Foot foot : ResidualFn::kFootAll)
     foot_pos[foot] = data->geom_xpos + 3 * residual_.foot_geom_id_[foot];
 
   // stance and flight positions
   double flight_pos[ResidualFn::kNumFoot][3];
   double stance_pos[ResidualFn::kNumFoot][3];
   // set to foot horizontal position:
-  for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
+  for (ResidualFn::A1Foot foot : ResidualFn::kFootAll) {
     flight_pos[foot][0] = stance_pos[foot][0] = foot_pos[foot][0];
     flight_pos[foot][1] = stance_pos[foot][1] = foot_pos[foot][1];
   }
 
   // ground height below feet
   double ground[ResidualFn::kNumFoot];
-  for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
+  for (ResidualFn::A1Foot foot : ResidualFn::kFootAll) {
     ground[foot] = Ground(model, data, foot_pos[foot]);
   }
 
   // step heights
-  ResidualFn::BittleGait gait = residual_.GetGait();
+  ResidualFn::A1Gait gait = residual_.GetGait();
   double step[ResidualFn::kNumFoot];
   residual_.FootStep(step, residual_.GetPhase(data->time), gait);
 
   // draw step height
-  for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
+  for (ResidualFn::A1Foot foot : ResidualFn::kFootAll) {
     stance_pos[foot][2] = ResidualFn::kFootRadius + ground[foot];
+    if (residual_.current_mode_ == ResidualFn::kModeBiped) {
+      // skip "hands" in biped mode
+      bool handstand =
+          ReinterpretAsInt(parameters[residual_.biped_type_param_id_]);
+      bool front_hand = !handstand && (foot == ResidualFn::kFootFL ||
+                                       foot == ResidualFn::kFootFR);
+      bool back_hand = handstand && (foot == ResidualFn::kFootHL ||
+                                     foot == ResidualFn::kFootHR);
+      if (front_hand || back_hand) continue;
+    }
     if (step[foot]) {
       flight_pos[foot][2] = ResidualFn::kFootRadius + step[foot] + ground[foot];
       AddConnector(scene, mjGEOM_CYLINDER, ResidualFn::kFootRadius,
@@ -401,9 +467,9 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
     }
   }
 
-  // support polygon
+  // support polygon (currently unused for cost)
   double polygon[2*ResidualFn::kNumFoot];
-  for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
+  for (ResidualFn::A1Foot foot : ResidualFn::kFootAll) {
     polygon[2*foot] = foot_pos[foot][0];
     polygon[2*foot + 1] = foot_pos[foot][1];
   }
@@ -416,7 +482,9 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   }
 
   // capture point
-  double height_goal = ResidualFn::kHeightQuadruped;
+  bool is_biped = residual_.current_mode_ == ResidualFn::kModeBiped;
+  double height_goal =
+      is_biped ? ResidualFn::kHeightBiped : ResidualFn::kHeightQuadruped;
   double fall_time = mju_sqrt(2*height_goal / residual_.gravity_);
   double capture[3];
   double* compos = SensorByName(model, data, "torso_subtreecom");
@@ -449,20 +517,23 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
 
 //  ============  task-state utilities  ============
 // save task-related ids
-void BittleFlat::ResetLocked(const mjModel* model) {
+void QuadrupedFlat::ResetLocked(const mjModel* model) {
   // ----------  task identifiers  ----------
   residual_.gait_param_id_ = ParameterIndex(model, "select_Gait");
   residual_.gait_switch_param_id_ = ParameterIndex(model, "select_Gait switch");
+  residual_.flip_dir_param_id_ = ParameterIndex(model, "select_Flip dir");
+  residual_.biped_type_param_id_ = ParameterIndex(model, "select_Biped type");
   residual_.cadence_param_id_ = ParameterIndex(model, "Cadence");
   residual_.amplitude_param_id_ = ParameterIndex(model, "Amplitude");
   residual_.duty_param_id_ = ParameterIndex(model, "Duty ratio");
+  residual_.arm_posture_param_id_ = ParameterIndex(model, "Arm posture");
   residual_.balance_cost_id_ = CostTermByName(model, "Balance");
   residual_.upright_cost_id_ = CostTermByName(model, "Upright");
   residual_.height_cost_id_ = CostTermByName(model, "Height");
 
   // ----------  model identifiers  ----------
-  residual_.torso_body_id_ = mj_name2id(model, mjOBJ_XBODY, "root");
-  if (residual_.torso_body_id_ < 0) mju_error("body 'root' not found");
+  residual_.torso_body_id_ = mj_name2id(model, mjOBJ_XBODY, "trunk");
+  if (residual_.torso_body_id_ < 0) mju_error("body 'trunk' not found");
 
   residual_.head_site_id_ = mj_name2id(model, mjOBJ_SITE, "head");
   if (residual_.head_site_id_ < 0) mju_error("site 'head' not found");
@@ -473,14 +544,22 @@ void BittleFlat::ResetLocked(const mjModel* model) {
   residual_.goal_mocap_id_ = model->body_mocapid[goal_id];
   if (residual_.goal_mocap_id_ < 0) mju_error("body 'goal' is not mocap");
 
-  // foot geom ids - these need to match your robot's geom names
-  residual_.foot_geom_id_[ResidualFn::kFootLF] = mj_name2id(model, mjOBJ_GEOM, "left_front_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootLB] = mj_name2id(model, mjOBJ_GEOM, "left_back_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootRF] = mj_name2id(model, mjOBJ_GEOM, "right_front_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootRB] = mj_name2id(model, mjOBJ_GEOM, "right_back_knee_c");
+  // foot geom ids
+  int foot_index = 0;
+  for (const char* footname : {"FL", "HL", "FR", "HR"}) {
+    int foot_id = mj_name2id(model, mjOBJ_GEOM, footname);
+    if (foot_id < 0) mju_error_s("geom '%s' not found", footname);
+    residual_.foot_geom_id_[foot_index] = foot_id;
+    foot_index++;
+  }
 
-  for (int i = 0; i < ResidualFn::kNumFoot; i++) {
-    if (residual_.foot_geom_id_[i] < 0) mju_error("Foot geom not found");
+  // shoulder body ids
+  int shoulder_index = 0;
+  for (const char* shouldername : {"FL_hip", "HL_hip", "FR_hip", "HR_hip"}) {
+    int foot_id = mj_name2id(model, mjOBJ_BODY, shouldername);
+    if (foot_id < 0) mju_error_s("body '%s' not found", shouldername);
+    residual_.shoulder_body_id_[shoulder_index] = foot_id;
+    shoulder_index++;
   }
 
   // ----------  derived kinematic quantities for Flip  ----------
@@ -526,22 +605,32 @@ void BittleFlat::ResetLocked(const mjModel* model) {
       (residual_.land_time_ * residual_.land_time_);
 }
 
-// compute average foot position
-void BittleFlat::ResidualFn::AverageFootPos(
+// compute average foot position, depending on mode
+void QuadrupedFlat::ResidualFn::AverageFootPos(
     double avg_foot_pos[3], double* foot_pos[kNumFoot]) const {
-  mju_add3(avg_foot_pos, foot_pos[kFootLB], foot_pos[kFootRB]);
-  mju_addTo3(avg_foot_pos, foot_pos[kFootLF]);
-  mju_addTo3(avg_foot_pos, foot_pos[kFootRF]);
-  mju_scl3(avg_foot_pos, avg_foot_pos, 0.25);
+  if (current_mode_ == kModeBiped) {
+    int handstand = ReinterpretAsInt(parameters_[biped_type_param_id_]);
+    if (handstand) {
+      mju_add3(avg_foot_pos, foot_pos[kFootFL], foot_pos[kFootFR]);
+    } else {
+      mju_add3(avg_foot_pos, foot_pos[kFootHL], foot_pos[kFootHR]);
+    }
+    mju_scl3(avg_foot_pos, avg_foot_pos, 0.5);
+  } else {
+    mju_add3(avg_foot_pos, foot_pos[kFootHL], foot_pos[kFootHR]);
+    mju_addTo3(avg_foot_pos, foot_pos[kFootFL]);
+    mju_addTo3(avg_foot_pos, foot_pos[kFootFR]);
+    mju_scl3(avg_foot_pos, avg_foot_pos, 0.25);
+  }
 }
 
 // return phase as a function of time
-double BittleFlat::ResidualFn::GetPhase(double time) const {
+double QuadrupedFlat::ResidualFn::GetPhase(double time) const {
   return phase_start_ + (time - phase_start_time_) * phase_velocity_;
 }
 
 // horizontal Walk trajectory
-void BittleFlat::ResidualFn::Walk(double pos[2], double time) const {
+void QuadrupedFlat::ResidualFn::Walk(double pos[2], double time) const {
   if (mju_abs(angvel_) < kMinAngvel) {
     // no rotation, go in straight line
     double forward[2] = {heading_[0], heading_[1]};
@@ -560,13 +649,15 @@ void BittleFlat::ResidualFn::Walk(double pos[2], double time) const {
 }
 
 // get gait
-BittleFlat::ResidualFn::BittleGait BittleFlat::ResidualFn::GetGait() const {
-  return static_cast<BittleGait>(ReinterpretAsInt(current_gait_));
+QuadrupedFlat::ResidualFn::A1Gait QuadrupedFlat::ResidualFn::GetGait() const {
+  if (current_mode_ == kModeBiped)
+    return kGaitTrot;
+  return static_cast<A1Gait>(ReinterpretAsInt(current_gait_));
 }
 
 // return normalized target step height
-double BittleFlat::ResidualFn::StepHeight(double time, double footphase,
-                                        double duty_ratio) const {
+double QuadrupedFlat::ResidualFn::StepHeight(double time, double footphase,
+                                             double duty_ratio) const {
   double angle = fmod(time + mjPI - footphase, 2*mjPI) - mjPI;
   double value = 0;
   if (duty_ratio < 1) {
@@ -577,18 +668,18 @@ double BittleFlat::ResidualFn::StepHeight(double time, double footphase,
 }
 
 // compute target step height for all feet
-void BittleFlat::ResidualFn::FootStep(double step[kNumFoot], double time,
-                                    BittleGait gait) const {
+void QuadrupedFlat::ResidualFn::FootStep(double step[kNumFoot], double time,
+                                         A1Gait gait) const {
   double amplitude = parameters_[amplitude_param_id_];
   double duty_ratio = parameters_[duty_param_id_];
-  for (BittleFoot foot : kFootAll) {
+  for (A1Foot foot : kFootAll) {
     double footphase = 2*mjPI*kGaitPhase[gait][foot];
     step[foot] = amplitude * StepHeight(time, footphase, duty_ratio);
   }
 }
 
 // height during flip
-double BittleFlat::ResidualFn::FlipHeight(double time) const {
+double QuadrupedFlat::ResidualFn::FlipHeight(double time) const {
   if (time >= jump_time_ + flight_time_ + land_time_) {
     return kHeightQuadruped + ground_;
   }
@@ -606,7 +697,9 @@ double BittleFlat::ResidualFn::FlipHeight(double time) const {
 }
 
 // orientation during flip
-void BittleFlat::ResidualFn::FlipQuat(double quat[4], double time) const {
+//  total rotation = leap + flight + land
+//            2*pi = pi/2 + 5*pi/4 + pi/4
+void QuadrupedFlat::ResidualFn::FlipQuat(double quat[4], double time) const {
   double angle = 0;
   if (time >= jump_time_ + flight_time_ + land_time_) {
     angle = 2*mjPI;
@@ -624,6 +717,109 @@ void BittleFlat::ResidualFn::FlipQuat(double quat[4], double time) const {
   double axis[3] = {0, flip_dir ? 1.0 : -1.0, 0};
   mju_axisAngle2Quat(quat, axis, angle);
   mju_mulQuat(quat, orientation_, quat);
+}
+
+
+// --------------------- Residuals for quadruped task --------------------
+//   Number of residuals: 4
+//     Residual (0): position_z - average(foot position)_z - height_goal
+//     Residual (1): position - goal_position
+//     Residual (2): orientation - goal_orientation
+//     Residual (3): control
+//   Number of parameters: 1
+//     Parameter (1): height_goal
+// -----------------------------------------------------------------------
+void QuadrupedHill::ResidualFn::Residual(const mjModel* model,
+                                         const mjData* data,
+                                         double* residual) const {
+  // ---------- Residual (0) ----------
+  // standing height goal
+  double height_goal = parameters_[0];
+
+  // system's standing height
+  double standing_height = SensorByName(model, data, "position")[2];
+
+  // average foot height
+  double FRz = SensorByName(model, data, "FR")[2];
+  double FLz = SensorByName(model, data, "FL")[2];
+  double RRz = SensorByName(model, data, "RR")[2];
+  double RLz = SensorByName(model, data, "RL")[2];
+  double avg_foot_height = 0.25 * (FRz + FLz + RRz + RLz);
+
+  residual[0] = (standing_height - avg_foot_height) - height_goal;
+
+  // ---------- Residual (1) ----------
+  // goal position
+  const double* goal_position = data->mocap_pos;
+
+  // system's position
+  double* position = SensorByName(model, data, "position");
+
+  // position error
+  mju_sub3(residual + 1, position, goal_position);
+
+  // ---------- Residual (2) ----------
+  // goal orientation
+  double goal_rotmat[9];
+  const double* goal_orientation = data->mocap_quat;
+  mju_quat2Mat(goal_rotmat, goal_orientation);
+
+  // system's orientation
+  double body_rotmat[9];
+  double* orientation = SensorByName(model, data, "orientation");
+  mju_quat2Mat(body_rotmat, orientation);
+
+  mju_sub(residual + 4, body_rotmat, goal_rotmat, 9);
+
+  // ---------- Residual (3) ----------
+  mju_copy(residual + 13, data->ctrl, model->nu);
+}
+
+// -------- Transition for quadruped task --------
+//   If quadruped is within tolerance of goal ->
+//   set goal to next from keyframes.
+// -----------------------------------------------
+void QuadrupedHill::TransitionLocked(mjModel* model, mjData* data) {
+  // set mode to GUI selection
+  if (mode > 0) {
+    residual_.current_mode_ = mode - 1;
+  } else {
+    // ---------- Compute tolerance ----------
+    // goal position
+    const double* goal_position = data->mocap_pos;
+
+    // goal orientation
+    const double* goal_orientation = data->mocap_quat;
+
+    // system's position
+    double* position = SensorByName(model, data, "position");
+
+    // system's orientation
+    double* orientation = SensorByName(model, data, "orientation");
+
+    // position error
+    double position_error[3];
+    mju_sub3(position_error, position, goal_position);
+    double position_error_norm = mju_norm3(position_error);
+
+    // orientation error
+    double geodesic_distance =
+        1.0 - mju_abs(mju_dot(goal_orientation, orientation, 4));
+
+    // ---------- Check tolerance ----------
+    double tolerance = 1.5e-1;
+    if (position_error_norm <= tolerance && geodesic_distance <= tolerance) {
+      // update task state
+      residual_.current_mode_ += 1;
+      if (residual_.current_mode_ == model->nkey) {
+        residual_.current_mode_ = 0;
+      }
+    }
+  }
+
+  // ---------- Set goal ----------
+  mju_copy3(data->mocap_pos, model->key_mpos + 3 * residual_.current_mode_);
+  mju_copy4(data->mocap_quat, model->key_mquat + 4 * residual_.current_mode_);
 }
 
 }  // namespace mjpc
