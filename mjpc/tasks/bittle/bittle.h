@@ -89,7 +89,7 @@ class BittleFlat : public Task {
     // duty ratio  cadence  amplitude  balance   upright   height
     // unitless    Hz       meter      unitless  unitless  unitless
       {1,          1,       0,         0,        1,        1},      // stand
-      {0.75,       1,       0.03,      0,        1,        1},      // walk
+      {0.75,       1,       0.01,      0,        1,        1},      // walk
       {0.45,       2,       0.03,      0.2,      1,        1},      // trot
       {0.4,        4,       0.05,      0.03,     0.5,      0.2},    // canter
       {0.3,        3.5,     0.10,      0.03,     0.2,      0.1}     // gallop
@@ -112,16 +112,16 @@ class BittleFlat : public Task {
     constexpr static double kAutoGaitMinTime = 1;     // second
 
     // target torso height over feet when quadrupedal
-    constexpr static double kHeightQuadruped = 0.7;  // meter - adjusted for Bittle
+    constexpr static double kHeightQuadruped = 1.2;  // meter - adjusted for Bittle
 
     // radius of foot geoms
-    constexpr static double kFootRadius = 0.01;       // meter - adjusted for Bittle
+    constexpr static double kFootRadius = 0.005;       // meter - adjusted for Bittle
 
     // below this target yaw velocity, walk straight
     constexpr static double kMinAngvel = 0.01;        // radian/second
 
     // flip: crouching height, from which leap is initiated
-    constexpr static double kCrouchHeight = 0.7;     // meter - adjusted for Bittle
+    constexpr static double kCrouchHeight = 0.8;     // meter - adjusted for Bittle
 
     // flip: leap height, beginning of flight phase
     constexpr static double kLeapHeight = 0.3;        // meter - adjusted for Bittle

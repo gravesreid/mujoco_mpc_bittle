@@ -73,14 +73,14 @@
 
 
   <actuator>
-    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true" ctrlrange="-10 10" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true"     ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true"             ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true"         ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
   </actuator>
 
   <sensor>
