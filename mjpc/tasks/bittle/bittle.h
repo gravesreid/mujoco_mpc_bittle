@@ -18,6 +18,8 @@
 #include <string>
 #include <mujoco/mujoco.h>
 #include "mjpc/task.h"
+#include <vector>
+#include <array>
 
 namespace mjpc {
 
@@ -25,6 +27,8 @@ class BittleFlat : public Task {
  public:
   std::string Name() const override;
   std::string XmlPath() const override;
+
+  
   class ResidualFn : public mjpc::BaseResidualFn {
    public:
     explicit ResidualFn(const BittleFlat* task)
@@ -33,6 +37,14 @@ class BittleFlat : public Task {
     void Residual(const mjModel* model, const mjData* data,
                   double* residual) const override;
 
+    // feet
+    enum BittleFoot {
+      kFootLF  = 0,  // left-front
+      kFootLB,       // left-back
+      kFootRF,       // right-front
+      kFootRB,       // right-back
+      kNumFoot
+    };
    private:
     friend class BittleFlat;
     //  ============  enums  ============
@@ -45,14 +57,6 @@ class BittleFlat : public Task {
       kNumMode
     };
 
-    // feet
-    enum BittleFoot {
-      kFootLF  = 0,  // left-front
-      kFootLB,       // left-back
-      kFootRF,       // right-front
-      kFootRB,       // right-back
-      kNumFoot
-    };
 
     // gaits
     enum BittleGait {
@@ -78,7 +82,7 @@ class BittleFlat : public Task {
     // LF     LB     RF     RB
       {0,     0,     0,     0   },   // stand
       {0,     0.75,  0.5,   0.25},   // walk
-      {0,     0.75,   0.5,   0.25   },   // trot
+      {0,     0.5,   0.5,     0   },   // trot
       {0,     0.33,  0.33,  0.66},   // canter
       {0,     0.4,   0.05,  0.35}    // gallop
     };
@@ -89,8 +93,8 @@ class BittleFlat : public Task {
     // duty ratio  cadence  amplitude  balance   upright   height
     // unitless    Hz       meter      unitless  unitless  unitless
       {1,          1,       0,         0,        1,        1},      // stand
-      {0.96,       1,       0.01,      0.2,        1,        1},      // walk
-      {0.9,       2,       0.03,      0.2,      1,        1},      // trot
+      {0.6,       1,       0.01,      0.2,        1,        1},      // walk
+      {0.65,       1,       0.03,      0.2,      1,        1},      // trot
       {0.9,        4,       0.05,      0.03,     0.5,      0.2},    // canter
       {0.9,        3.5,     0.10,      0.03,     0.2,      0.1}     // gallop
     };
@@ -100,7 +104,7 @@ class BittleFlat : public Task {
     {
       0,     // stand
       0.01,  // walk
-      0.02,  // trot
+      0.03,  // trot
       0.6,   // canter
       2,     // gallop
     };
@@ -112,7 +116,7 @@ class BittleFlat : public Task {
     constexpr static double kAutoGaitMinTime = 1;     // second
 
     // target torso height over feet when quadrupedal
-    constexpr static double kHeightQuadruped = .8;  // meter - adjusted for Bittle
+    constexpr static double kHeightQuadruped = .05;  // meter - adjusted for Bittle
 
     // radius of foot geoms
     constexpr static double kFootRadius = 0.05;       // meter - adjusted for Bittle
@@ -214,6 +218,8 @@ class BittleFlat : public Task {
     double land_rot_acc_      = 0;
   };
 
+  
+
   BittleFlat() : residual_(this) {}
   void TransitionLocked(mjModel* model, mjData* data) override;
 
@@ -224,6 +230,8 @@ class BittleFlat : public Task {
   void ModifyScene(const mjModel* model, const mjData* data,
                    mjvScene* scene) const override;
 
+  
+
  protected:
   std::unique_ptr<mjpc::ResidualFn> ResidualLocked() const override {
     return std::make_unique<ResidualFn>(residual_);
@@ -233,7 +241,15 @@ class BittleFlat : public Task {
  private:
   friend class ResidualFn;
   ResidualFn residual_;
+    // sensor IDs for qpos of each joint
+  std::array<int,8> joint_sensor_id_;
+  // time and data history
+  mutable std::vector<double>                    time_history_;
+  mutable std::vector<std::array<double,8>>      joint_history_;
+  mutable std::vector<std::array<double,ResidualFn::kNumFoot>> step_height_history_;
 };
+
+
 
 }  // namespace mjpc
 

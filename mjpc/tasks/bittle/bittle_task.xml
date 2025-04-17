@@ -7,12 +7,12 @@
   <custom>
     <!-- agent -->
     <text name="task_transition" data="Quadruped|Biped|Walk|Scramble|Flip" />
-    <numeric name="agent_planner" data="2 " />
-    <numeric name="agent_horizon" data="0.35" />
+    <numeric name="agent_planner" data="2 " /> 
+    <numeric name="agent_horizon" data="1.5" /> <!-- Default 0.35 -->
     <numeric name="agent_timestep" data="0.01" />
-    <numeric name="sampling_spline_points" data="3" />
-    <numeric name="sampling_trajectories" data="60"/>
-    <numeric name="sampling_exploration" data="0.04" />
+    <numeric name="sampling_spline_points" data="20" /> <!-- Default 3 -->
+    <numeric name="sampling_trajectories" data="128"/> <!-- Default 60 max is 128-->
+    <numeric name="sampling_exploration" data="0.1" /> <!-- Default 0.04 -->
     <numeric name="gradient_spline_points" data="5" />
 
     <!-- residual -->
@@ -20,27 +20,27 @@
     <text name="residual_list_Gait" data="Stand|Walk|Trot|Canter|Gallop"/>
     <numeric name="residual_select_Gait switch" data="1"/>
     <text name="residual_list_Gait switch" data="Manual|Automatic"/>
-    <numeric name="residual_Cadence" data="2 0 4" />
-    <numeric name="residual_Amplitude" data=".06 0 0.2" />
-    <numeric name="residual_Duty ratio" data="0 0 1"/>
-    <numeric name="residual_Walk speed" data="0 0 4"/>
+    <numeric name="residual_Cadence" data="6 0 10" />
+    <numeric name="residual_Amplitude" data=".03 0 1" />
+    <numeric name="residual_Duty ratio" data=".5 0 1"/>
+    <numeric name="residual_Walk speed" data="3 0 10"/>
     <numeric name="residual_Walk turn" data="0 -2 2"/>
     <numeric name="residual_Heading" data="0 -3.14 3.14" />
   </custom>
 
   <visual>
     <headlight diffuse="0.6 0.6 0.6" ambient="0.3 0.3 0.3" specular="0 0 0"/>
-    <global azimuth="-90" elevation="-20" />
+    <global azimuth="0" elevation="-10"/>
   </visual>
 
   <statistic extent="1" center="0 0 .3"/>
 
   <worldbody>
-    <light pos="0 0 1.5" dir="0 0 -1" diffuse="0.5 0.5 0.5" specular="0.3 0.3 0.3"
+    <light pos="0 1 1.5" dir="0 0 -1" diffuse="0.5 0.5 0.5" specular="0.3 0.3 0.3"
       directional="true" castshadow="false"/>
     <geom name="floor" size="0 0 0.1" pos="0 0 -0.01" type="plane" material="blue_grid"/>
-    <body name="goal" mocap="true" pos="0 1.5 0.26">
-      <geom size="0.12" contype="0" conaffinity="0" rgba="0 .5 0 .5" group="2"/>
+    <body name="goal" mocap="true" pos="0 0.5 0.056">
+      <geom size="0.012" contype="0" conaffinity="0" rgba="0 .5 0 .5" group="2"/>
     </body>
 
     <body name="box" mocap="true" pos="-2.5 0 0">
@@ -69,28 +69,28 @@
   </default>
 
   <!-- Include the Bittle robot physics model -->
-  <include file="bittle.xml" />
+  <include file="bittle_scaled.xml" />
 
 
   <actuator>
-    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true"     ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true"             ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
-    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true"         ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-1.75 1.75"/>
+    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true"     ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true"             ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true"         ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
   </actuator>
 
   <sensor>
     <!-- cost -->
-    <user name="Upright" dim="3" user="6 1 0 3 0.05" />
-    <user name="Height" dim="1" user="6 1 0 3 0.04" />
+    <user name="Upright" dim="3" user="6 .25 0 3 0.05" />
+    <user name="Height" dim="1" user="6 .25 0 3 0.04" />
     <user name="Position" dim="3" user="2 0.2 0 0.5 0.1" />
-    <user name="Gait" dim="4" user="6 2 0 10 0.03" />
+    <user name="Gait" dim="4" user="6 .5 0 10 0.03" />
     <user name="Balance" dim="2" user="2 0.2 0 0.3 0.1" />
-    <user name="Effort" dim="8" user="0 0.03 0.0 0.1" />
+    <user name="Effort" dim="8" user="0 0.01 0.0 0.1" />
     <user name="Posture" dim="8" user="0 0.02 0.0 0.1" />
     <user name="Orientation" dim="2" user="0 0 0 .03" />
     <user name="Angmom" dim="3" user="0 0 0 .03" />
@@ -112,10 +112,22 @@
     <actuatorvel name="right-front-shoulder-joint_v" actuator="right-front-shoulder-joint" />
     <actuatorpos name="right-front-knee-joint_p" actuator="right-front-knee-joint" />
     <actuatorvel name="right-front-knee-joint_v" actuator="right-front-knee-joint" />
+
+    <!-- Joint angle sensors -->
+      <!-- Joint‐angle sensors -->
+    <jointpos name="lf_shoulder_angle"  joint="left-front-shoulder-joint"/>
+    <jointpos name="lf_knee_angle"      joint="left-front-knee-joint"/>
+    <jointpos name="lb_shoulder_angle"  joint="left-back-shoulder-joint"/>
+    <jointpos name="lb_knee_angle"      joint="left-back-knee-joint"/>
+    <jointpos name="rf_shoulder_angle"  joint="right-front-shoulder-joint"/>
+    <jointpos name="rf_knee_angle"      joint="right-front-knee-joint"/>
+    <jointpos name="rb_shoulder_angle"  joint="right-back-shoulder-joint"/>
+    <jointpos name="rb_knee_angle"      joint="right-back-knee-joint"/>
+
     
     <!-- IMU sensors -->
-    <framequat name="orientation" objtype="site" noise="0.001" objname="imu" />
-    <gyro name="angular-velocity" site="imu" noise="0.005" cutoff="34.9" />
+    <framequat name="orientation" objtype="site" noise="0.00" objname="imu" />
+    <gyro name="angular-velocity" site="imu" noise="0.00" cutoff="34.9" />
     
     
     <!-- trace -->
@@ -130,14 +142,14 @@
 
 <keyframe>
   <key name="home"
-       qpos="0 0 0.95
+       qpos="0 0 0.075
              1 0 0 0               
-             0.5 0.5                    
-             0.5 0.5                   
-             0.5 0.5                     
-             0.5 0.5"/>                   
+             0.56 0.56                    
+             0.56 0.56                   
+             0.56 0.56                     
+             0.56 0.56"/>                   
   <key name="crouch"
-       qpos="0 0 0.95
+       qpos="0 0 0.6
              1 0 0 0
              -0.5 -0.5                  
              -0.5 -0.5                

@@ -19,12 +19,17 @@
 #include <mujoco/mujoco.h>
 #include "mjpc/task.h"
 #include "mjpc/utilities.h"
+#include <random>
+#include <ctime>
+#include <absl/random/random.h>
+#include <fstream> 
 
 namespace mjpc {
 std::string BittleFlat::XmlPath() const {
   return GetModelPath("bittle/bittle_task.xml");
 }
 std::string BittleFlat::Name() const { return "Bittle Flat"; }
+
 
 void BittleFlat::ResidualFn::Residual(const mjModel* model,
                                     const mjData* data,
@@ -44,7 +49,6 @@ void BittleFlat::ResidualFn::Residual(const mjModel* model,
   double* torso_xmat = data->xmat + 9*torso_body_id_;
   double* goal_pos = data->mocap_pos + 3*goal_mocap_id_;
   double* compos = SensorByName(model, data, "torso_subtreecom");
-
 
   // ---------- Upright ----------
   if (current_mode_ != kModeFlip) {
@@ -106,6 +110,7 @@ for (BittleFoot foot : kFootAll) {
   if (current_mode_ == kModeScramble) {
     double torso_to_goal[3];
     double* goal = data->mocap_pos + 3*goal_mocap_id_;
+    // Debugging: Print current foot positions
     mju_sub3(torso_to_goal, goal, torso_pos);
     mju_normalize3(torso_to_goal);
     mju_sub3(torso_to_goal, goal, foot_pos[foot]);
@@ -171,11 +176,21 @@ for (BittleFoot foot : kFootAll) {
 
   // sensor dim sanity check
   CheckSensorDim(model, counter);
+
 }
 
 //  ============  transition  ============
 void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
   // ---------- handle mjData reset ----------
+  //double head_to_goal[2];
+  //double* head_loc = SensorByName(model, data, "head");
+  //double* goal = SensorByName(model, data, "goal");
+  //mju_sub(head_to_goal, goal, head_loc, 2);
+  //if (mju_norm(head_to_goal, 2) < 0.1) {
+   // absl::BitGen gen_;
+  //  data->mocap_pos[0] = absl::Uniform(gen_, -5, 5);
+   // data->mocap_pos[1] = absl::Uniform(gen_, -5, 5);
+  //}
   if (data->time < residual_.last_transition_time_ ||
       residual_.last_transition_time_ == -1) {
     if (mode != ResidualFn::kModeQuadruped) {
@@ -447,6 +462,8 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   AddGeom(scene, mjGEOM_SPHERE, foot_size, pcp, /*mat=*/nullptr, kPcpRgba);
 }
 
+
+
 //  ============  task-state utilities  ============
 // save task-related ids
 void BittleFlat::ResetLocked(const mjModel* model) {
@@ -482,6 +499,22 @@ void BittleFlat::ResetLocked(const mjModel* model) {
   for (int i = 0; i < ResidualFn::kNumFoot; i++) {
     if (residual_.foot_geom_id_[i] < 0) mju_error("Foot geom not found");
   }
+
+    const char* names[8] = {
+    "lf_shoulder_angle","lf_knee_angle",
+    "lb_shoulder_angle","lb_knee_angle",
+    "rf_shoulder_angle","rf_knee_angle",
+    "rb_shoulder_angle","rb_knee_angle"
+  };
+  for(int i=0;i<8;i++){
+    joint_sensor_id_[i] = mj_name2id(model,mjOBJ_SENSOR, names[i]);
+    if (joint_sensor_id_[i] < 0) mju_error("joint sensor not found");
+  }
+
+  // 2) reset history
+  time_history_.clear();
+  joint_history_.clear();
+  step_height_history_.clear();
 
   // ----------  derived kinematic quantities for Flip  ----------
   residual_.gravity_ = mju_norm3(model->opt.gravity);
@@ -524,6 +557,8 @@ void BittleFlat::ResetLocked(const mjModel* model) {
   residual_.land_rot_acc_ =
       2 * (residual_.flight_rot_vel_ * residual_.land_time_ - mjPI / 4) /
       (residual_.land_time_ * residual_.land_time_);
+
+
 }
 
 // compute average foot position
