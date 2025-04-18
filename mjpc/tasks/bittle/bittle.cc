@@ -351,6 +351,18 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
   // save mode
   residual_.current_mode_ = static_cast<ResidualFn::BittleMode>(mode);
   residual_.last_transition_time_ = data->time;
+
+  // I added this
+    auto* non_const_this = const_cast<BittleFlat*>(this);
+  non_const_this->LogJointAngles(data);
+  static int save_counter = 0;
+save_counter++;
+if (save_counter >= 10000) {  // Save every 1000 steps or so
+  SaveJointDataToCSV("/home/reid/projects/optimal_control/joint_data.csv");
+  // add debugging print statement
+  save_counter = 0;
+}
+// end of I added this
 }
 
 // colors of visualisation elements drawn in ModifyScene()
@@ -364,8 +376,6 @@ constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
 
-    auto* non_const_this = const_cast<BittleFlat*>(this);
-  non_const_this->LogJointAngles(data);
   // flip target pose
   if (residual_.current_mode_ == ResidualFn::kModeFlip) {
     double flip_time = data->time - residual_.mode_start_time_;
@@ -465,10 +475,6 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   AddGeom(scene, mjGEOM_SPHERE, foot_size, pcp, /*mat=*/nullptr, kPcpRgba);
 }
 
-// Example: Save data to CSV after simulation
-void SaveSimulationData(BittleFlat& task) {
-  task.SaveJointDataToCSV("/home/reid/projects/optimal_control/joint_data.csv");
-}
 
 //  ============  task-state utilities  ============
 // save task-related ids
@@ -677,6 +683,7 @@ void BittleFlat::LogJointAngles(const mjData* data) {
 
   // Append to history
   joint_angle_history_.push_back(joint_angles);
+  // add debugging print statement
 }
 // Save logged data to a CSV file
 void BittleFlat::SaveJointDataToCSV(const std::string& filename) const {

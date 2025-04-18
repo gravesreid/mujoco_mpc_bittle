@@ -124,6 +124,7 @@ class Task {
   virtual std::string Name() const = 0;
   virtual std::string XmlPath() const = 0;
 
+
   // mode
   int mode;
 
