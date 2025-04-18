@@ -28,6 +28,11 @@ class BittleFlat : public Task {
   std::string Name() const override;
   std::string XmlPath() const override;
 
+  void LogJointAngles(const mjData* data);
+  const std::vector<std::array<double, 8>>& GetJointAngleHistory() const {
+    return joint_angle_history_;
+  }
+  void SaveJointDataToCSV(const std::string& filename) const;
   
   class ResidualFn : public mjpc::BaseResidualFn {
    public:
@@ -244,9 +249,10 @@ class BittleFlat : public Task {
     // sensor IDs for qpos of each joint
   std::array<int,8> joint_sensor_id_;
   // time and data history
-  mutable std::vector<double>                    time_history_;
   mutable std::vector<std::array<double,8>>      joint_history_;
   mutable std::vector<std::array<double,ResidualFn::kNumFoot>> step_height_history_;
+  std::vector<std::array<double, 8>> joint_angle_history_;
+  std::vector<double> time_history_;
 };
 
 

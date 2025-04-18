@@ -363,6 +363,9 @@ constexpr float kPcpRgba[4] = {0.5, 0.5, 0.2, 1};   // projected capture point
 // draw task-related geometry in the scene
 void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
                            mjvScene* scene) const {
+
+    auto* non_const_this = const_cast<BittleFlat*>(this);
+  non_const_this->LogJointAngles(data);
   // flip target pose
   if (residual_.current_mode_ == ResidualFn::kModeFlip) {
     double flip_time = data->time - residual_.mode_start_time_;
@@ -462,7 +465,10 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   AddGeom(scene, mjGEOM_SPHERE, foot_size, pcp, /*mat=*/nullptr, kPcpRgba);
 }
 
-
+// Example: Save data to CSV after simulation
+void SaveSimulationData(BittleFlat& task) {
+  task.SaveJointDataToCSV("/home/reid/projects/optimal_control/joint_data.csv");
+}
 
 //  ============  task-state utilities  ============
 // save task-related ids
@@ -659,6 +665,36 @@ void BittleFlat::ResidualFn::FlipQuat(double quat[4], double time) const {
   double axis[3] = {0, flip_dir ? 1.0 : -1.0, 0};
   mju_axisAngle2Quat(quat, axis, angle);
   mju_mulQuat(quat, orientation_, quat);
+}
+
+void BittleFlat::LogJointAngles(const mjData* data) {
+  // Extract joint angles from qpos[7:15]
+  time_history_.push_back(data->time);
+  std::array<double, 8> joint_angles;
+  for (int i = 0; i < 8; ++i) {
+    joint_angles[i] = data->qpos[7 + i];
+  }
+
+  // Append to history
+  joint_angle_history_.push_back(joint_angles);
+}
+// Save logged data to a CSV file
+void BittleFlat::SaveJointDataToCSV(const std::string& filename) const {
+  std::ofstream file(filename);
+
+  // Write CSV header
+  file << "time,shoulder_FL,knee_FL,shoulder_HL,knee_HL,shoulder_FR,knee_FR,shoulder_HR,knee_HR\n";
+
+  // Write data rows
+  for (size_t i = 0; i < time_history_.size(); ++i) {
+    file << time_history_[i];  // Time
+    for (double angle : joint_angle_history_[i]) {
+      file << "," << angle;  // Joint angles
+    }
+    file << "\n";
+  }
+
+  file.close();
 }
 
 }  // namespace mjpc

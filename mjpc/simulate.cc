@@ -87,6 +87,7 @@ const mjuiDef defFile[] = {
   {mjITEM_BUTTON,    "Save mjb",      2, nullptr,                    ""},
   {mjITEM_BUTTON,    "Print model",   2, nullptr,                    "CM"},
   {mjITEM_BUTTON,    "Print data",    2, nullptr,                    "CD"},
+  {mjITEM_BUTTON,    "Save Joint Angles", 2, nullptr,                    "CJ"},
   {mjITEM_BUTTON,    "Quit",          1, nullptr,                    "CQ"},
   {mjITEM_BUTTON,    "Screenshot",    2, nullptr,                    "CP"},
   {mjITEM_END}
@@ -1162,6 +1163,7 @@ void UiEvent(mjuiState* state) {
       case 5:             // Screenshot
         sim->screenshotrequest.store(true);
         break;
+        
       }
     } else if (it && it->sectionid == SECT_OPTION) {
       if (it->pdata == &sim->spacing) {
