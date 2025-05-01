@@ -16,8 +16,8 @@
     <numeric name="gradient_spline_points" data="5" />
 
     <!-- residual -->
-    <numeric name="residual_select_Gait" data="0"/>
-    <text name="residual_list_Gait" data="Stand|Walk|Trot|Canter|Gallop"/>
+    <numeric name="residual_select_Gait" data="1"/>
+    <text name="residual_list_Gait" data="Stand|Walk|"/>
     <numeric name="residual_select_Gait switch" data="1"/>
     <text name="residual_list_Gait switch" data="Manual|Automatic"/>
     <numeric name="residual_Cadence" data="6 0 10" />
@@ -73,19 +73,19 @@
 
 
   <actuator>
-    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true"     ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true"             ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
-    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true"         ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-2.75 2.75"/>
+    <position name="left-front-shoulder-joint" joint="left-front-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="left-front-knee-joint" joint="left-front-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="left-back-shoulder-joint" joint="left-back-shoulder-joint" ctrllimited="true"     ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="left-back-knee-joint" joint="left-back-knee-joint" ctrllimited="true"             ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="right-back-shoulder-joint" joint="right-back-shoulder-joint" ctrllimited="true"   ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="right-back-knee-joint" joint="right-back-knee-joint" ctrllimited="true"           ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="right-front-shoulder-joint" joint="right-front-shoulder-joint" ctrllimited="true" ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
+    <position name="right-front-knee-joint" joint="right-front-knee-joint" ctrllimited="true"         ctrlrange="-1 1" gear="1" forcelimited="true" forcerange="-0.55 0.55"/>
   </actuator>
 
   <sensor>
     <!-- cost -->
-    <user name="Upright" dim="3" user="6 .25 0 3 0.05" />
+    <user name="Upright" dim="3" user="6 2 0 6 0.05" />
     <user name="Height" dim="1" user="6 .25 0 3 0.04" />
     <user name="Position" dim="3" user="2 0.2 0 0.5 0.1" />
     <user name="Gait" dim="4" user="6 .5 0 10 0.03" />
@@ -142,7 +142,7 @@
 
 <keyframe>
   <key name="home"
-       qpos="0 0 0.075
+       qpos="0 0 0.085
              1 0 0 0               
              0.56 0.56                    
              0.56 0.56                   

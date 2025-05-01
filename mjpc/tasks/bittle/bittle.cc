@@ -82,6 +82,7 @@ void BittleFlat::ResidualFn::Residual(const mjModel* model,
   }
 
 
+
   // ---------- Position ----------
   double* head = data->site_xpos + 3*head_site_id_;
   double target[3];
@@ -176,6 +177,7 @@ for (BittleFoot foot : kFootAll) {
 
   // sensor dim sanity check
   CheckSensorDim(model, counter);
+  
 
 }
 
@@ -235,7 +237,7 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
       if (mode == ResidualFn::kModeScramble && gait == ResidualFn::kGaitStand)
         continue;
       bool lower = com_speed > ResidualFn::kGaitAuto[gait];
-      bool upper = gait == ResidualFn::kGaitGallop ||
+      bool upper = gait == ResidualFn::kGaitWalk ||
                    com_speed <= ResidualFn::kGaitAuto[gait + 1];
       bool wait = mju_abs(residual_.gait_switch_time_ - data->time) >
                   ResidualFn::kAutoGaitMinTime;
@@ -326,7 +328,7 @@ void BittleFlat::TransitionLocked(mjModel* model, mjData* data) {
       // set parameters
       weight[CostTermByName(model, "Upright")] = 0.2;
       weight[CostTermByName(model, "Height")] = 5;
-      weight[CostTermByName(model, "Position")] = 0.5;
+      weight[CostTermByName(model, "Position")] = 0;
       weight[CostTermByName(model, "Gait")] = 0.2;
       weight[CostTermByName(model, "Balance")] = 0;
       weight[CostTermByName(model, "Effort")] = 0.005;
@@ -412,6 +414,7 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   double ground[ResidualFn::kNumFoot];
   for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
     ground[foot] = Ground(model, data, foot_pos[foot]);
+    std::cout << "Ground height for foot " << foot << ": " << ground[foot] << std::endl;
   }
 
   // step heights
@@ -422,6 +425,7 @@ void BittleFlat::ModifyScene(const mjModel* model, const mjData* data,
   // draw step height
   for (ResidualFn::BittleFoot foot : ResidualFn::kFootAll) {
     stance_pos[foot][2] = ResidualFn::kFootRadius + ground[foot];
+    std::cout << "foot " << foot << " using geom id " << residual_.foot_geom_id_[foot] << std::endl;
     if (step[foot]) {
       flight_pos[foot][2] = ResidualFn::kFootRadius + step[foot] + ground[foot];
       AddConnector(scene, mjGEOM_CYLINDER, ResidualFn::kFootRadius,
@@ -502,11 +506,22 @@ void BittleFlat::ResetLocked(const mjModel* model) {
   residual_.goal_mocap_id_ = model->body_mocapid[goal_id];
   if (residual_.goal_mocap_id_ < 0) mju_error("body 'goal' is not mocap");
 
-  // foot geom ids - these need to match your robot's geom names
-  residual_.foot_geom_id_[ResidualFn::kFootLF] = mj_name2id(model, mjOBJ_GEOM, "left_front_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootLB] = mj_name2id(model, mjOBJ_GEOM, "left_back_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootRF] = mj_name2id(model, mjOBJ_GEOM, "right_front_knee_c");
-  residual_.foot_geom_id_[ResidualFn::kFootRB] = mj_name2id(model, mjOBJ_GEOM, "right_back_knee_c");
+    // foot geom ids
+int foot_index = 0;
+  for (const char* footname : {"left_front_foot", "left_back_foot", "right_front_foot", "right_back_foot"}) {
+    int foot_id = mj_name2id(model, mjOBJ_GEOM, footname);
+    if (foot_id < 0) mju_error_s("geom '%s' not found", footname);
+    residual_.foot_geom_id_[foot_index] = foot_id;
+    foot_index++;
+  }
+
+  for (int i = 0; i < model->ngeom; i++) {
+    // Print all sphere geoms to find your foot geometries
+    if (model->geom_type[i] == mjGEOM_SPHERE) {
+        const char* name = mj_id2name(model, mjOBJ_GEOM, i);
+        std::cout << "Sphere geom ID " << i << " name: " << (name ? name : "unnamed") << std::endl;
+    }
+}
 
   for (int i = 0; i < ResidualFn::kNumFoot; i++) {
     if (residual_.foot_geom_id_[i] < 0) mju_error("Foot geom not found");

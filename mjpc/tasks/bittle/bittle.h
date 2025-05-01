@@ -50,6 +50,7 @@ class BittleFlat : public Task {
       kFootRB,       // right-back
       kNumFoot
     };
+
    private:
     friend class BittleFlat;
     //  ============  enums  ============
@@ -67,9 +68,6 @@ class BittleFlat : public Task {
     enum BittleGait {
       kGaitStand = 0,
       kGaitWalk,
-      kGaitTrot,
-      kGaitCanter,
-      kGaitGallop,
       kNumGait
     };
 
@@ -78,8 +76,7 @@ class BittleFlat : public Task {
                                                   kFootRF, kFootRB};
     constexpr static BittleFoot kFootHind[2] = {kFootLB, kFootRB};
     constexpr static BittleGait kGaitAll[kNumGait] = {kGaitStand, kGaitWalk,
-                                                  kGaitTrot, kGaitCanter,
-                                                  kGaitGallop};
+                                                  };
 
     // gait phase signature (normalized)
     constexpr static double kGaitPhase[kNumGait][kNumFoot] =
@@ -87,9 +84,6 @@ class BittleFlat : public Task {
     // LF     LB     RF     RB
       {0,     0,     0,     0   },   // stand
       {0,     0.75,  0.5,   0.25},   // walk
-      {0,     0.5,   0.5,     0   },   // trot
-      {0,     0.33,  0.33,  0.66},   // canter
-      {0,     0.4,   0.05,  0.35}    // gallop
     };
 
     // gait parameters, set when switching into gait
@@ -98,10 +92,7 @@ class BittleFlat : public Task {
     // duty ratio  cadence  amplitude  balance   upright   height
     // unitless    Hz       meter      unitless  unitless  unitless
       {1,          1,       0,         0,        1,        1},      // stand
-      {0.6,       1,       0.01,      0.2,        1,        1},      // walk
-      {0.65,       1,       0.03,      0.2,      1,        1},      // trot
-      {0.9,        4,       0.05,      0.03,     0.5,      0.2},    // canter
-      {0.9,        3.5,     0.10,      0.03,     0.2,      0.1}     // gallop
+      {0.9,       1,       0.03,      0.2,        1,        1},      // walk
     };
 
     // velocity ranges for automatic gait switching, meter/second
@@ -109,9 +100,6 @@ class BittleFlat : public Task {
     {
       0,     // stand
       0.01,  // walk
-      0.03,  // trot
-      0.6,   // canter
-      2,     // gallop
     };
 
     // automatic gait switching: time constant for com speed filter
@@ -121,16 +109,16 @@ class BittleFlat : public Task {
     constexpr static double kAutoGaitMinTime = 1;     // second
 
     // target torso height over feet when quadrupedal
-    constexpr static double kHeightQuadruped = .05;  // meter - adjusted for Bittle
+    constexpr static double kHeightQuadruped = .08;  // meter - adjusted for Bittle
 
     // radius of foot geoms
-    constexpr static double kFootRadius = 0.05;       // meter - adjusted for Bittle
+    constexpr static double kFootRadius = 0.005;       // meter - adjusted for Bittle
 
     // below this target yaw velocity, walk straight
     constexpr static double kMinAngvel = 0.01;        // radian/second
 
     // flip: crouching height, from which leap is initiated
-    constexpr static double kCrouchHeight = 0.8;     // meter - adjusted for Bittle
+    constexpr static double kCrouchHeight = 0.04;     // meter - adjusted for Bittle
 
     // flip: leap height, beginning of flight phase
     constexpr static double kLeapHeight = 0.3;        // meter - adjusted for Bittle
